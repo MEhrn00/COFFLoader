@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     printf("Got contents of COFF file\n");
     arguments = unhexlify((unsigned char*)argv[3], &argumentSize);
     printf("Running/Parsing the COFF file\n");
-    checkcode = RunCOFF(argv[1], (unsigned char*)coff_data, filesize, arguments, argumentSize);
+    checkcode = COFFLoader_RunCOFF(argv[1], (unsigned char*)coff_data, filesize, arguments, argumentSize);
     if (checkcode == 0) {
         printf("Ran/parsed the coff\n");
         outdata = BeaconGetOutputData(&outdataSize);

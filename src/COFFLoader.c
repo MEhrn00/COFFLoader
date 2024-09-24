@@ -207,7 +207,7 @@ void* process_symbol(char* symbolstring) {
  * implementation, return values will need to be checked, more relocation
  * types need to be handled, and needs to have different arguments for use
  * in any agent. */
-int RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize) {
+int COFFLoader_RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize) {
     coff_sect_t *coff_sect_ptr = NULL;
     coff_reloc_t *coff_reloc_ptr = NULL;
     int retcode = 0;
