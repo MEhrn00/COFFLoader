@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
-project(COFFLoader LANGUAGES C)
+project(
+  COFFLoader
+  DESCRIPTION
+    "Quick and dirty COFF loader (AKA Beacon Object Files). Currently can run un-modified BOF's so it can be used for testing without a CS agent running it."
+  LANGUAGES C)
 
 add_subdirectory(src)
 
