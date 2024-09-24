@@ -7,6 +7,9 @@
  * Built off of the beacon.h file provided to build for CS.
  */
 #ifndef BEACON_COMPATIBILITY_H_
+
+#include <windows.h>
+
  /* Structures as is in beacon.h */
 extern unsigned char* InternalFunctions[30][2];
 typedef struct {

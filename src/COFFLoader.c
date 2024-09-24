@@ -15,7 +15,109 @@
 #include "beacon_compatibility.h"
 #endif
 
-#include "COFFLoader.h"
+#include <COFFLoader/COFFLoader.h>
+
+/* These seem to be the same sizes across architectures, relocations are different though. Defined both sets of types. */
+
+/* sizeof 20 */
+typedef struct coff_file_header {
+    uint16_t Machine;
+    uint16_t NumberOfSections;
+    uint32_t TimeDateStamp;
+    uint32_t PointerToSymbolTable;
+    uint32_t NumberOfSymbols;
+    uint16_t SizeOfOptionalHeader;
+    uint16_t Characteristics;
+} coff_file_header_t;
+
+/* AMD64  should always be here */
+#define MACHINETYPE_AMD64 0x8664
+
+#pragma pack(push,1)
+
+/* Size of 40 */
+typedef struct coff_sect {
+    char Name[8];
+    uint32_t VirtualSize;
+    uint32_t VirtualAddress;
+    uint32_t SizeOfRawData;
+    uint32_t PointerToRawData;
+    uint32_t PointerToRelocations;
+    uint32_t PointerToLineNumbers;
+    uint16_t NumberOfRelocations;
+    uint16_t NumberOfLinenumbers;
+    uint32_t Characteristics;
+} coff_sect_t;
+
+
+typedef struct coff_reloc {
+    uint32_t VirtualAddress;
+    uint32_t SymbolTableIndex;
+    uint16_t Type;
+} coff_reloc_t;
+
+typedef struct coff_sym {
+    union {
+        char Name[8];
+        uint32_t value[2];
+    } first;
+    uint32_t Value;
+    uint16_t SectionNumber;
+    uint16_t Type;
+    uint8_t StorageClass;
+    uint8_t NumberOfAuxSymbols;
+
+} coff_sym_t;
+
+#pragma pack(pop)
+/* AMD64 Specific types */
+#define IMAGE_REL_AMD64_ABSOLUTE    0x0000
+#define IMAGE_REL_AMD64_ADDR64      0x0001
+#define IMAGE_REL_AMD64_ADDR32      0x0002
+#define IMAGE_REL_AMD64_ADDR32NB    0x0003
+/* Most common from the looks of it, just 32-bit relative address from the byte following the relocation */
+#define IMAGE_REL_AMD64_REL32       0x0004
+/* Second most common, 32-bit address without an image base. Not sure what that means... */
+#define IMAGE_REL_AMD64_REL32_1     0x0005
+#define IMAGE_REL_AMD64_REL32_2     0x0006
+#define IMAGE_REL_AMD64_REL32_3     0x0007
+#define IMAGE_REL_AMD64_REL32_4     0x0008
+#define IMAGE_REL_AMD64_REL32_5     0x0009
+#define IMAGE_REL_AMD64_SECTION     0x000A
+#define IMAGE_REL_AMD64_SECREL      0x000B
+#define IMAGE_REL_AMD64_SECREL7     0x000C
+#define IMAGE_REL_AMD64_TOKEN       0x000D
+#define IMAGE_REL_AMD64_SREL32      0x000E
+#define IMAGE_REL_AMD64_PAIR        0x000F
+#define IMAGE_REL_AMD64_SSPAN32     0x0010
+
+/*i386 Relocation types */
+
+#define IMAGE_REL_I386_ABSOLUTE     0x0000
+#define IMAGE_REL_I386_DIR16        0x0001
+#define IMAGE_REL_I386_REL16        0x0002
+#define IMAGE_REL_I386_DIR32        0x0006
+#define IMAGE_REL_I386_DIR32NB      0x0007
+#define IMAGE_REL_I386_SEG12        0x0009
+#define IMAGE_REL_I386_SECTION      0x000A
+#define IMAGE_REL_I386_SECREL       0x000B
+#define IMAGE_REL_I386_TOKEN        0x000C
+#define IMAGE_REL_I386_SECREL7      0x000D
+#define IMAGE_REL_I386_REL32        0x0014
+
+/* Section Characteristic Flags */
+
+#define IMAGE_SCN_MEM_WRITE 0x80000000
+#define IMAGE_SCN_MEM_READ 0x40000000
+#define IMAGE_SCN_MEM_EXECUTE 0x20000000
+#define IMAGE_SCN_ALIGN_16BYTES 0x00500000
+#define IMAGE_SCN_MEM_NOT_CACHED 0x04000000
+#define IMAGE_SCN_MEM_NOT_PAGED 0x08000000
+#define IMAGE_SCN_MEM_SHARED 0x10000000
+#define IMAGE_SCN_CNT_CODE 0x00000020
+#define IMAGE_SCN_CNT_UNINITIALIZED_DATA 0x00000080
+#define IMAGE_SCN_MEM_DISCARDABLE 0x02000000
+
 
  /* Enable or disable debug output if testing or adding new relocation types */
 #ifdef DEBUG
@@ -32,78 +134,6 @@
 #define PREPENDSYMBOLVALUE "__imp__"
 #endif
 
-unsigned char* unhexlify(unsigned char* value, int *outlen) {
-    unsigned char* retval = NULL;
-    char byteval[3] = { 0 };
-    unsigned int counter = 0;
-    int counter2 = 0;
-    char character = 0;
-    if (value == NULL) {
-        return NULL;
-    }
-    DEBUG_PRINT("Unhexlify Strlen: %lu\n", (long unsigned int)strlen((char*)value));
-    if (strlen((char*)value) % 2 != 0) {
-        DEBUG_PRINT("Either value is NULL, or the hexlified string isn't valid\n");
-        goto errcase;
-    }
-
-    retval = calloc(strlen((char*)value) + 1, 1);
-    if (retval == NULL) {
-        goto errcase;
-    }
-
-    counter2 = 0;
-    for (counter = 0; counter < strlen((char*)value); counter += 2) {
-        memcpy(byteval, value + counter, 2);
-        character = (char)strtol(byteval, NULL, 16);
-        memcpy(retval + counter2, &character, 1);
-        counter2++;
-    }
-    *outlen = counter2;
-
-errcase:
-    return retval;
-}
-
-
-
-/* Helper to just get the contents of a file, used for testing. Real
- * implementations of this in an agent would use the tasking from the
- * C2 server for this */
-unsigned char* getContents(char* filepath, uint32_t* outsize) {
-    FILE *fin = NULL;
-    uint32_t fsize = 0;
-    size_t readsize = 0;
-    unsigned char* buffer = NULL;
-    unsigned char* tempbuffer = NULL;
-
-    fin = fopen(filepath, "rb");
-    if (fin == NULL) {
-        return NULL;
-    }
-    fseek(fin, 0, SEEK_END);
-    fsize = ftell(fin);
-    fseek(fin, 0, SEEK_SET);
-    tempbuffer = calloc(fsize, 1);
-    if (tempbuffer == NULL) {
-        fclose(fin);
-        return NULL;
-    }
-    memset(tempbuffer, 0, fsize);
-    readsize = fread(tempbuffer, 1, fsize, fin);
-
-    fclose(fin);
-    buffer = calloc(readsize, 1);
-    if (buffer == NULL) {
-        free(tempbuffer);
-        return NULL;
-    }
-    memset(buffer, 0, readsize);
-    memcpy(buffer, tempbuffer, readsize - 1);
-    free(tempbuffer);
-    *outsize = fsize;
-    return buffer;
-}
 
 static BOOL starts_with(const char* string, const char* substring) {
     return strncmp(string, substring, strlen(substring)) == 0;
@@ -633,48 +663,3 @@ int RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, uns
             DEBUG_PRINT("Returning\n");
             return retcode;
 }
-
-#ifdef COFF_STANDALONE
-int main(int argc, char* argv[]) {
-    char* coff_data = NULL;
-    unsigned char* arguments = NULL;
-    int argumentSize = 0;
-#ifdef _WIN32
-    char* outdata = NULL;
-    int outdataSize = 0;
-#endif
-    uint32_t filesize = 0;
-    int checkcode = 0;
-    if (argc < 3) {
-        printf("ERROR: %s go /path/to/object/file.o (arguments)\n", argv[0]);
-        return 1;
-    }
-
-    coff_data = (char*)getContents(argv[2], &filesize);
-    if (coff_data == NULL) {
-        return 1;
-    }
-    printf("Got contents of COFF file\n");
-    arguments = unhexlify((unsigned char*)argv[3], &argumentSize);
-    printf("Running/Parsing the COFF file\n");
-    checkcode = RunCOFF(argv[1], (unsigned char*)coff_data, filesize, arguments, argumentSize);
-    if (checkcode == 0) {
-#ifdef _WIN32
-        printf("Ran/parsed the coff\n");
-        outdata = BeaconGetOutputData(&outdataSize);
-        if (outdata != NULL) {
-
-            printf("Outdata Below:\n\n%s\n", outdata);
-        }
-#endif
-    }
-    else {
-        printf("Failed to run/parse the COFF file\n");
-    }
-    if (coff_data) {
-        free(coff_data);
-    }
-    return 0;
-}
-
-#endif
