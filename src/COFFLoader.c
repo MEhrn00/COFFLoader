@@ -134,7 +134,7 @@ typedef struct coff_sym {
 #define PREPENDSYMBOLVALUE "__imp__"
 #endif
 
-#define COFFLOADER_RETURN_VAL_IF(expr, val, fmt, ...) if ((expr)) { DEBUG_PRINT(fmt, __VA_ARGS__); return val; }
+#define COFFLOADER_RETURN_VAL_IF(expr, val, fmt, ...) if ((expr)) { DEBUG_PRINT(fmt, ##__VA_ARGS__); return val; }
 
 
 static BOOL starts_with(const char* string, const char* substring) {
