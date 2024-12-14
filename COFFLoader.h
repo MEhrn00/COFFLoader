@@ -120,6 +120,7 @@ uint32_t ProtectionFlags[8] = {
 #define IMAGE_SCN_CNT_UNINITIALIZED_DATA 0x00000080
 #define IMAGE_SCN_MEM_DISCARDABLE 0x02000000
 
+#if 0
 unsigned char *unhexlify(unsigned char *value, int *outlen);
 typedef int (*goCallback)(char *, int);
 #ifdef BUILD_DLL
@@ -132,4 +133,5 @@ EXPORT int __cdecl LoadAndRun(char *argsBuffer, uint32_t bufferSize, goCallback 
 #endif
 
 int RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, unsigned char *argumentdata, int argumentSize, goCallback data);
+#endif
 #endif

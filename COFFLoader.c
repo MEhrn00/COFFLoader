@@ -5,6 +5,9 @@
  * it's meant to provide functional example of loading a COFF file in memory
  * and maybe be useful.
  */
+
+#include <COFFLoader/COFFLoader.h>
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -16,6 +19,10 @@
 #endif
 
 #include "COFFLoader.h"
+
+typedef COFFLoader_goCallback goCallback;
+
+static int RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, unsigned char *argumentdata, int argumentSize, goCallback callback);
 
 /* Enable or disable debug output if testing or adding new relocation types */
 #ifdef DEBUG
@@ -32,6 +39,7 @@
 #define PREPENDSYMBOLVALUE "__imp__"
 #endif
 
+#if 0
 unsigned char* unhexlify(unsigned char* value, int *outlen) {
     unsigned char* retval = NULL;
     char byteval[3] = { 0 };
@@ -108,6 +116,7 @@ unsigned char *getContents(char *filepath, uint32_t *outsize)
     *outsize = fsize;
     return buffer;
 }
+#endif
 
 static BOOL starts_with(const char* string, const char* substring) {
     return strncmp(string, substring, strlen(substring)) == 0;
@@ -117,7 +126,7 @@ static BOOL starts_with(const char* string, const char* substring) {
  * library its from, and return the right function pointer. Will need to
  * implement in the loading of the beacon internal functions, or any other
  * internal functions you want to have available. */
-void *process_symbol(char *symbolstring)
+static void *process_symbol(char *symbolstring)
 {
     void *functionaddress = NULL;
     char localcopy[1024] = {0};
@@ -168,7 +177,7 @@ void *process_symbol(char *symbolstring)
     return functionaddress;
 }
 
-int LoadAndRun(char *argsBuffer, uint32_t bufferSize, goCallback callback)
+static int LoadAndRun(char *argsBuffer, uint32_t bufferSize, goCallback callback)
 {
 #if defined(_WIN32)
     // argsBuffer:  functionname |coff_data |  args_data
@@ -206,7 +215,7 @@ int LoadAndRun(char *argsBuffer, uint32_t bufferSize, goCallback callback)
  * implementation, return values will need to be checked, more relocation
  * types need to be handled, and needs to have different arguments for use
  * in any agent. */
-int RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, unsigned char *argumentdata, int argumentSize, goCallback callback)
+static int RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, unsigned char *argumentdata, int argumentSize, goCallback callback)
 {
     coff_file_header_t *coff_header_ptr = NULL;
     coff_sect_t *coff_sect_ptr = NULL;
@@ -596,7 +605,7 @@ int RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, uns
 #ifdef _WIN32
     if (callback != NULL)
     {
-        outdata = BeaconGetOutputData(&outdataSize);
+        outdata = COFFLoader_GetOutputData(&outdataSize);
         if (outdata != NULL)
         {
             DEBUG_PRINT("[COFFLoader] Calling Go callback at %p\n", callback);
@@ -669,3 +678,11 @@ int main(int argc, char *argv[])
 }
 
 #endif
+
+int __cdecl COFFLoader_LoadAndRun(char *argsBuffer, uint32_t bufferSize, COFFLoader_goCallback callback) {
+    return LoadAndRun(argsBuffer, bufferSize, callback);
+}
+
+int COFFLoader_RunCOFF(char *functionname, unsigned char *coff_data, uint32_t filesize, unsigned char *argumentdata, int argumentSize, COFFLoader_goCallback data) {
+    return RunCOFF(functionname, coff_data, filesize, argumentdata, argumentSize, data);
+}

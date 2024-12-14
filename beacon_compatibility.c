@@ -15,6 +15,8 @@
 
 #include "beacon_compatibility.h"
 
+#include <COFFLoader/COFFLoader.h>
+
 #define DEFAULTPROCESSNAME "rundll32.exe"
 #ifdef _WIN64
 #define X86PATH "SysWOW64"
@@ -346,3 +348,8 @@ char* BeaconGetOutputData(int *outsize) {
 }
 
 #endif
+
+char *COFFLoader_GetOutputData(int *outsize) {
+    return BeaconGetOutputData(outsize);
+}
+
