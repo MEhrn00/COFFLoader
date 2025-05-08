@@ -1,6 +1,6 @@
 #ifndef COFFLOADER_H_
 #define COFFLOADER_H_
-#include <stdio.h>
+
 #include <stdint.h>
 
 /* These seem to be the same sizes across architectures, relocations are different though. Defined both sets of types. */
@@ -104,6 +104,7 @@ typedef struct coff_sym {
 #define IMAGE_SCN_CNT_UNINITIALIZED_DATA 0x00000080
 #define IMAGE_SCN_MEM_DISCARDABLE 0x02000000
 
-int RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize);
-unsigned char* unhexlify(unsigned char* value, int *outlen);
+int COFFLoader_RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize);
+char *COFFLoader_GetOutputData(int *outsize);
+
 #endif
