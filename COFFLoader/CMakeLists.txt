@@ -1,6 +1,5 @@
 add_library(COFFLoader
   COFFLoader.c
-  beacon_compatibility.c
 )
 
 target_compile_features(COFFLoader PRIVATE c_std_11)
