@@ -36,6 +36,59 @@
 
 #define COFFLOADER_RETURN_VAL_IF(expr, val, fmt, ...) if ((expr)) { DEBUG_PRINT(fmt, ##__VA_ARGS__); return val; }
 
+
+#pragma pack(push, 1)
+
+/* sizeof 20 */
+typedef struct coff_file_header {
+    uint16_t Machine;
+    uint16_t NumberOfSections;
+    uint32_t TimeDateStamp;
+    uint32_t PointerToSymbolTable;
+    uint32_t NumberOfSymbols;
+    uint16_t SizeOfOptionalHeader;
+    uint16_t Characteristics;
+} coff_file_header_t;
+
+/* AMD64  should always be here */
+#define MACHINETYPE_AMD64 0x8664
+
+/* Size of 40 */
+typedef struct coff_sect {
+    char Name[8];
+    uint32_t VirtualSize;
+    uint32_t VirtualAddress;
+    uint32_t SizeOfRawData;
+    uint32_t PointerToRawData;
+    uint32_t PointerToRelocations;
+    uint32_t PointerToLineNumbers;
+    uint16_t NumberOfRelocations;
+    uint16_t NumberOfLinenumbers;
+    uint32_t Characteristics;
+} coff_sect_t;
+
+
+typedef struct coff_reloc {
+    uint32_t VirtualAddress;
+    uint32_t SymbolTableIndex;
+    uint16_t Type;
+} coff_reloc_t;
+
+typedef struct coff_sym {
+    union {
+        char Name[8];
+        uint32_t value[2];
+    } first;
+    uint32_t Value;
+    uint16_t SectionNumber;
+    uint16_t Type;
+    uint8_t StorageClass;
+    uint8_t NumberOfAuxSymbols;
+
+} coff_sym_t;
+
+#pragma pack(pop)
+
 static BOOL starts_with(const char* string, const char* substring) {
     return strncmp(string, substring, strlen(substring)) == 0;
 }
