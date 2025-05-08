@@ -7,6 +7,10 @@
  * Built off of the beacon.h file provided to build for CS.
  */
 #ifndef BEACON_COMPATIBILITY_H_
+
+#include <windows.h>
+#include <stdint.h>
+
  /* Structures as is in beacon.h */
 extern unsigned char* InternalFunctions[30][2];
 typedef struct {
@@ -62,5 +66,4 @@ void   BeaconCleanupProcess(PROCESS_INFORMATION * pInfo);
 BOOL   toWideChar(char * src, wchar_t * dst, int max);
 uint32_t swap_endianess(uint32_t indata);
 
-char* BeaconGetOutputData(int *outsize);
 #endif
