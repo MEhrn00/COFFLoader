@@ -14,6 +14,7 @@
 #include <windows.h>
 
 #include "beacon_compatibility.h"
+#include "COFFLoader.h"
 
 #define DEFAULTPROCESSNAME "rundll32.exe"
 #ifdef _WIN64
@@ -386,7 +387,7 @@ BOOL toWideChar(char* src, wchar_t* dst, int max) {
     return MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, src, -1, dst, max / sizeof(wchar_t));
 }
 
-char* BeaconGetOutputData(int *outsize) {
+char* COFFLoader_GetOutputData(int *outsize) {
     if (outsize == NULL) {
         return NULL;
     }

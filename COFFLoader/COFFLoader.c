@@ -36,79 +36,6 @@
 
 #define COFFLOADER_RETURN_VAL_IF(expr, val, fmt, ...) if ((expr)) { DEBUG_PRINT(fmt, ##__VA_ARGS__); return val; }
 
-unsigned char* unhexlify(unsigned char* value, int *outlen) {
-    unsigned char* retval = NULL;
-    char byteval[3] = { 0 };
-    unsigned int counter = 0;
-    int counter2 = 0;
-    char character = 0;
-    if (value == NULL) {
-        return NULL;
-    }
-    DEBUG_PRINT("Unhexlify Strlen: %lu\n", (long unsigned int)strlen((char*)value));
-    if (strlen((char*)value) % 2 != 0) {
-        DEBUG_PRINT("Either value is NULL, or the hexlified string isn't valid\n");
-        goto errcase;
-    }
-
-    retval = calloc(strlen((char*)value) + 1, 1);
-    if (retval == NULL) {
-        goto errcase;
-    }
-
-    counter2 = 0;
-    for (counter = 0; counter < strlen((char*)value); counter += 2) {
-        memcpy(byteval, value + counter, 2);
-        character = (char)strtol(byteval, NULL, 16);
-        memcpy(retval + counter2, &character, 1);
-        counter2++;
-    }
-    *outlen = counter2;
-
-errcase:
-    return retval;
-}
-
-
-
-/* Helper to just get the contents of a file, used for testing. Real
- * implementations of this in an agent would use the tasking from the
- * C2 server for this */
-unsigned char* getContents(char* filepath, uint32_t* outsize) {
-    FILE *fin = NULL;
-    uint32_t fsize = 0;
-    size_t readsize = 0;
-    unsigned char* buffer = NULL;
-    unsigned char* tempbuffer = NULL;
-
-    fin = fopen(filepath, "rb");
-    if (fin == NULL) {
-        return NULL;
-    }
-    fseek(fin, 0, SEEK_END);
-    fsize = ftell(fin);
-    fseek(fin, 0, SEEK_SET);
-    tempbuffer = calloc(fsize, 1);
-    if (tempbuffer == NULL) {
-        fclose(fin);
-        return NULL;
-    }
-    memset(tempbuffer, 0, fsize);
-    readsize = fread(tempbuffer, 1, fsize, fin);
-
-    fclose(fin);
-    buffer = calloc(readsize, 1);
-    if (buffer == NULL) {
-        free(tempbuffer);
-        return NULL;
-    }
-    memset(buffer, 0, readsize);
-    memcpy(buffer, tempbuffer, readsize - 1);
-    free(tempbuffer);
-    *outsize = fsize;
-    return buffer;
-}
-
 static BOOL starts_with(const char* string, const char* substring) {
     return strncmp(string, substring, strlen(substring)) == 0;
 }
@@ -188,7 +115,7 @@ static bool coff_symbol_is_external(struct coff_sym *symbol) {
  * implementation, return values will need to be checked, more relocation
  * types need to be handled, and needs to have different arguments for use
  * in any agent. */
-int RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize) {
+int COFFLoader_RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, unsigned char* argumentdata, int argumentSize) {
     coff_sect_t *coff_sect_ptr = NULL;
     coff_reloc_t *coff_reloc_ptr = NULL;
     int retcode = 0;
@@ -625,48 +552,3 @@ int RunCOFF(char* functionname, unsigned char* coff_data, uint32_t filesize, uns
             DEBUG_PRINT("Returning\n");
             return retcode;
 }
-
-#ifdef COFF_STANDALONE
-int main(int argc, char* argv[]) {
-    char* coff_data = NULL;
-    unsigned char* arguments = NULL;
-    int argumentSize = 0;
-#ifdef _WIN32
-    char* outdata = NULL;
-    int outdataSize = 0;
-#endif
-    uint32_t filesize = 0;
-    int checkcode = 0;
-    if (argc < 3) {
-        printf("ERROR: %s go /path/to/object/file.o (arguments)\n", argv[0]);
-        return 1;
-    }
-
-    coff_data = (char*)getContents(argv[2], &filesize);
-    if (coff_data == NULL) {
-        return 1;
-    }
-    printf("Got contents of COFF file\n");
-    arguments = unhexlify((unsigned char*)argv[3], &argumentSize);
-    printf("Running/Parsing the COFF file\n");
-    checkcode = RunCOFF(argv[1], (unsigned char*)coff_data, filesize, arguments, argumentSize);
-    if (checkcode == 0) {
-#ifdef _WIN32
-        printf("Ran/parsed the coff\n");
-        outdata = BeaconGetOutputData(&outdataSize);
-        if (outdata != NULL) {
-
-            printf("Outdata Below:\n\n%s\n", outdata);
-        }
-#endif
-    }
-    else {
-        printf("Failed to run/parse the COFF file\n");
-    }
-    if (coff_data) {
-        free(coff_data);
-    }
-    return 0;
-}
-
-#endif
