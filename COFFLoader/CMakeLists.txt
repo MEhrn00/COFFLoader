@@ -1,6 +1,3 @@
-add_library(COFFLoader)
-add_library(COFFLoader::COFFLoader ALIAS COFFLoader)
-
 target_sources(COFFLoader
   PRIVATE
     COFFLoader.c
@@ -32,11 +29,10 @@ target_compile_options(COFFLoader
     >
 )
 
-target_include_directories(COFFLoader PUBLIC $<INSTALL_INTERFACE:include>)
-
 include(GenerateExportHeader)
 generate_export_header(COFFLoader
   EXPORT_MACRO_NAME COFFLOADER_API
+  INCLUDE_GUARD_NAME COFFLOADER_EXPORT_H
   EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/include/COFFLoader/export.h
 )
 
@@ -49,9 +45,17 @@ target_sources(COFFLoader
       ${CMAKE_CURRENT_BINARY_DIR}/include/COFFLoader/export.h
 )
 
+install(TARGETS COFFLoader
+  EXPORT COFFLoaderTargets
+  FILE_SET public_source_headers
+  FILE_SET public_generated_headers
+)
+
+
 if(${COFFLOADER_BUILD_CLI})
-  add_executable(COFFLoader-cli
-    main.c
+  target_sources(COFFLoader-cli
+    PRIVATE
+      main.c
   )
 
   target_include_directories(COFFLoader-cli
