@@ -515,7 +515,7 @@ static BOOL starts_with(const char* string, const char* substring) {
  * library its from, and return the right function pointer. Will need to
  * implement in the loading of the beacon internal functions, or any other
  * internal functions you want to have available. */
-void* process_symbol(char* symbolstring) {
+static void* process_symbol(char* symbolstring) {
     void* functionaddress = NULL;
     char localcopy[1024] = { 0 };
     char* locallib = NULL;
